@@ -1,160 +1,55 @@
 const express = require("express")
 const router = express.Router()
 const mongoose = require("mongoose")
-// let genres = [
-//     {
-//        id: 1,
-//        name: "action"
-//     },
-//     {
-//        id: 2,
-//        name: "drama"
-//     },
-//     {
-//        id: 3,
-//        name: "comedy"
-//     },
-//     {
-//        id: 4,
-//        name: "romance"
-//     }
-//  ]
 
-// read genres
-
-// read genre by ID
-
+mongoose.set("strictQuery", true)
 mongoose.connect("mongodb://localhost/mern").then(() => {
    console.log("----------------------")
    console.log("connection established")
    console.log("----------------------")
 })
 genresSchema = new mongoose.Schema({
-   name: { type: String, required: true }
+   name: { type: String, required: true },
+   isDeleted: { type: Boolean, default: false }
 })
 let Genre = mongoose.model("Genre", genresSchema, "genres")
-
-
-
 // create genres
-const createGenre = async (name) => {
-   const genre = new Genre()
-   await Genre.findOne({ name: name })
-      .then((res) => {
-         if (res) {
-            console.log("\nalready exists !\n")
-         } else {
-            genre.name = name
-            genre.save()
-            console.log("added")
-         }
-      })
-      .catch((err) => {
-         console.log(err)
-      })
-}
 
 // read genres
-async function readGenres () {
+router.get("/", async (req, res) => {
    let genres = await Genre.find({})
-   for (let genre of genres) {
-      console.log(genre);
-   }
-}
-// read genre
-async function readGenre ( filter ) {
-   let genre = await Genre.findOne(filter)
-      console.log(genre);
-}
-// update genres
-async function updateGenre ( filter , payload ) {
-   let updated = await Genre.updateMany(filter , payload)
-      console.log(updated);
-}
-// delete genres
-async function deleteCourse( filter ) {
-   let deleted = await Genre.deleteMany(filter)
-      console.log(deleted)
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-async function removeDuplicates() {
-   let obj = {}
-   let genres = await Genre.find({})
-   genres.forEach((genre) => {
-      // if we found one genre with that name
-      obj[genre.name] !== undefined ?
-      // we want to remove it.
-         ( async () => {
-            console.log(await Genre.deleteOne({_id :genre.id }));
-            obj[genre.name]++ 
-         })()
-       // else , we good, 
-      :
-         obj[genre.name] = 0 
+   .catch(() => {
+      res.status(400).send("error occured")
    })
-}
-
-// read genres
-router.get("/", (req, res) => {
    res.send(genres)
 })
 // read genre
-router.get("/:id", (req, res) => {
+router.get("/:id", async (req, res) => {
    let genreId = req.params.id
-   let genre = genres.find((genre) => genre.id == genreId)
-   // if it exists already => error 400 = bad request
-   if (!genre) return res.status(404).send("genre not found")
-   return res.send(genre)
+   let genre = await Genre.findById(genreId)
+   .catch(() => {
+      res.status(403).send("couldn't find genre")
+   })
+   res.send(genre)
 })
 // create genre
 router.post("/", async (req, res) => {
-   try {
-      if (req.query.name) {
-         createGenre(req.query.name).then(() => {
-            res.send(`added new genre => { name : ${req.query.name} }`)
-         })
-      }
-   } catch (err) {
-      console.log(err)
-   }
+   let newGenre = await new Genre()
+   newGenre.name = req.body.name
+   newGenre = await newGenre.save()
+   res.send(newGenre)
 })
 // update genre
-router.put("/:id", (req, res) => {
-   let genre = genres.find((genre) => genre.id == req.params.id)
-   if (genre) {
-      genre.name = req.query.name
-   }
-   res.send(genre)
+router.put("/:id", async (req, res) => {
+      const updated = await Genre.findByIdAndUpdate(req.params.id, { name: req.body.name })
+      .catch(() => res.status(400).send("error updating"))
+      res.send(updated)
 })
 //delete genre (carefull cause req.params.id is str not id)
-router.delete("/:id", (req, res) => {
-   let genre = genres.find((genre) => genre.id == req.params.id)
-   if (genre) {
-      genres = genres.filter((genre) => genre.id !== parseInt(req.params.id))
-      return res.send(genres)
-   }
-   return res.status(404).send("genre not found")
+router.delete("/:id", async (req, res) => {
+      const deleted = await Genre.findByIdAndDelete(req.params.id)
+      .catch(() => res.status(400).send("error 400, couldnt delete"))
+      res.send(deleted)
 })
 
 module.exports = router

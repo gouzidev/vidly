@@ -5,6 +5,7 @@ const router = require("./routes/genres.js")
 
 require("dotenv").config()
 const app = express()
+app.use(express.json())
 app.use("/genres", router)
 debug("hello from debugger")
 
